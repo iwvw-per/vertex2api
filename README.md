@@ -9,7 +9,7 @@
 ```yaml
 services:
   vertex:
-    image: ghcr.io/iwvw-per/vertex2api:main
+    image: iwvw/vertex2api:main
     container_name: vertex-proxy
     restart: unless-stopped
     ports:

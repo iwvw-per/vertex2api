@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: iwvw-per/vertex2api
+  IMAGE_NAME: iwvw/vertex2api
 
 jobs:
   build:
