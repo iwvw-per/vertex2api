@@ -35,6 +35,23 @@ class ModelConfigBuilder:
             return
             
         try:
+            if not os.path.exists(MODELS_CONFIG_FILE):
+                # 如果文件不存在，自动创建一个默认的，避免用户手动配置麻烦
+                logger.warning(f"模型配置文件 {MODELS_CONFIG_FILE} 不存在，正在创建默认配置...")
+                default_models = {
+                    "models": [
+                        "gemini-1.5-flash", 
+                        "gemini-1.5-pro", 
+                        "gemini-2.0-flash-exp", 
+                        "gemini-2.0-pro-exp-02-05"
+                    ],
+                    "alias_map": {}
+                }
+                os.makedirs(os.path.dirname(MODELS_CONFIG_FILE), exist_ok=True)
+                with open(MODELS_CONFIG_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(default_models, f, ensure_ascii=False, indent=2)
+                logger.success(f"已自动生成默认模型配置文件: {MODELS_CONFIG_FILE}")
+
             with open(MODELS_CONFIG_FILE, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 ModelConfigBuilder._cached_map = cast(dict[str, str], config.get('alias_map', {}))
