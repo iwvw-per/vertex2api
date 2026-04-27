@@ -555,8 +555,6 @@ async def add_key(body: KeyBody, request: Request) -> dict[str, str]:
         raise HTTPException(status_code=400, detail="name / key 不能为空")
     if ":" in name:
         raise HTTPException(status_code=400, detail="name 不能包含冒号")
-    if not key.startswith("sk-"):
-        raise HTTPException(status_code=400, detail="key 必须以 sk- 开头")
 
     keys = _read_api_keys()
     keys = [k for k in keys if k["name"] != name]  # 同名覆盖

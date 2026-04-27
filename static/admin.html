@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VERTEX PROXY · CONTROL</title>
+<title>VERTEX PROXY · 控制面板</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -140,7 +140,7 @@
   .node { border: 1px solid var(--border); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 14px; transition: all .15s; }
   .node:hover { border-color: var(--border-strong); }
   .node.active { border-color: var(--ok); background: rgba(110, 194, 93, 0.04); }
-  .node.active::before { content: '● ACTIVE'; color: var(--ok); font-size: 10px; letter-spacing: 0.15em; margin-right: 8px; }
+  .node.active::before { content: '● 活跃'; color: var(--ok); font-size: 10px; letter-spacing: 0.15em; margin-right: 8px; }
   .node .info { flex: 1; min-width: 0; }
   .node .name { font-size: 13px; color: var(--fg); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .node .meta { font-size: 11px; color: var(--fg-muted); display: flex; gap: 12px; }
@@ -163,15 +163,15 @@
 
 <div id="loginView" class="login-wrap">
   <div class="login-card">
-    <h1>Authenticate.</h1>
-    <div class="sub">Vertex Proxy · Control</div>
+    <h1>身份验证.</h1>
+    <div class="sub">Vertex Proxy · 控制面板</div>
     <form id="loginForm">
       <div>
-        <label for="pw">Admin password</label>
+        <label for="pw">管理员密码</label>
         <input type="password" id="pw" autocomplete="current-password" autofocus required>
       </div>
       <div class="err-msg" id="loginErr" style="display:none"></div>
-      <button class="btn btn-primary" type="submit">Enter →</button>
+      <button class="btn btn-primary" type="submit">登录 →</button>
     </form>
     <div class="hint">
       首次部署？启动日志里会打印随机生成的管理员密码，搜索 <code>密码:</code>。<br>
@@ -182,36 +182,36 @@
 
 <div class="app" id="appView">
   <div class="topbar">
-    <div class="brand">Vertex Proxy <span class="dim">// Control</span></div>
+    <div class="brand">Vertex Proxy <span class="dim">// 控制面板</span></div>
     <div class="right">
       <div class="status"><span class="dot"></span><span id="portBadge">—</span></div>
-      <button class="btn btn-sm" onclick="logout()">Sign out</button>
+      <button class="btn btn-sm" onclick="logout()">登出</button>
     </div>
   </div>
 
   <div class="active-bar off" id="activeBar">
     <div>
-      <span class="label" id="activeLabel">No active node</span>
+      <span class="label" id="activeLabel">无活跃节点</span>
       <span class="node-name" id="activeName"></span>
       <span class="via" id="activeVia"></span>
     </div>
     <div>
-      <button class="btn btn-sm btn-danger" id="stopBtn" onclick="stopProxy()" style="display:none;">Stop &amp; direct</button>
+      <button class="btn btn-sm btn-danger" id="stopBtn" onclick="stopProxy()" style="display:none;">停止代理并直连</button>
     </div>
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="server">Server</button>
-    <button class="tab" data-tab="keys">API Keys</button>
-    <button class="tab" data-tab="proxy">Proxy &amp; Subscription</button>
+    <button class="tab active" data-tab="server">运行设置</button>
+    <button class="tab" data-tab="keys">API 密钥</button>
+    <button class="tab" data-tab="proxy">代理与订阅</button>
   </div>
 
   <div class="main">
 
     <div class="panel active" id="panel-server">
       <div class="section">
-        <h2>Server.</h2>
-        <div class="h2-sub">基本运行参数。端口与 debug 变更需重启容器生效。</div>
+        <h2>运行设置.</h2>
+        <div class="h2-sub">基本运行参数。端口与调试模式变更需重启容器生效。</div>
         <div class="grid">
           <div>
             <label>API 端口</label>
@@ -219,53 +219,53 @@
             <div class="field-hint">容器暴露端口 (1–65535)</div>
           </div>
           <div>
-            <label>Max Retries</label>
+            <label>最大重试次数</label>
             <input type="number" id="max_retries" min="0" max="100">
-            <div class="field-hint">失败时最大重试次数</div>
+            <div class="field-hint">上游失败时的自动重试次数</div>
           </div>
           <div class="full">
             <label class="checkbox-row">
               <input type="checkbox" id="debug">
-              <span>Debug 日志模式</span>
+              <span>Debug 详细日志模式</span>
             </label>
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+          <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
           <span id="saveTip" class="field-warn"></span>
         </div>
       </div>
 
       <div class="section">
-        <h2>Admin password.</h2>
-        <div class="h2-sub">修改管理面板登录密码。</div>
+        <h2>登录密码.</h2>
+        <div class="h2-sub">修改管理面板的登录密码。</div>
         <div class="grid">
           <div>
-            <label>New password</label>
+            <label>新密码</label>
             <input type="password" id="newPw" placeholder="至少 6 位">
           </div>
           <div style="display:flex;align-items:flex-end;">
-            <button class="btn" onclick="changePassword()">Update password</button>
+            <button class="btn" onclick="changePassword()">更新密码</button>
           </div>
         </div>
         <div id="pwLockedWarn" class="field-warn" style="display:none;margin-top:12px;">
-          当前由环境变量 <code>ADMIN_PASSWORD</code> 锁定，不能在面板修改。
+          当前由环境变量 <code>ADMIN_PASSWORD</code> 锁定，无法在面板修改。
         </div>
       </div>
     </div>
 
     <div class="panel" id="panel-keys">
       <div class="section">
-        <h2>API Keys.</h2>
+        <h2>API 密钥管理.</h2>
         <div class="h2-sub">调用 /v1/chat/completions 或 /v1beta/... 的访问密钥。修改立即生效。</div>
         <div class="grid">
           <div>
             <label>名称</label>
-            <input type="text" id="key_name" placeholder="e.g. my-client">
+            <input type="text" id="key_name" placeholder="例如: 生产环境">
           </div>
           <div>
-            <label>密钥 (以 sk- 开头)</label>
-            <input type="text" id="key_value" placeholder="sk-...">
+            <label>密钥值</label>
+            <input type="text" id="key_value" placeholder="任意自定义字符串">
           </div>
           <div class="full">
             <label>备注 (可选)</label>
@@ -273,11 +273,11 @@
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" onclick="addKey()">+ Add key</button>
-          <span class="field-hint" style="margin-left:4px;">同名会覆盖</span>
+          <button class="btn btn-primary" onclick="addKey()">+ 添加密钥</button>
+          <span class="field-hint" style="margin-left:4px;">同名名称将覆盖原有密钥</span>
         </div>
         <table class="table" style="margin-top:24px;">
-          <thead><tr><th>Name</th><th>Key</th><th>Description</th><th style="width:80px;"></th></tr></thead>
+          <thead><tr><th>名称</th><th>密钥</th><th>备注</th><th style="width:80px;">操作</th></tr></thead>
           <tbody id="keysTbody"></tbody>
         </table>
       </div>
@@ -285,35 +285,35 @@
 
     <div class="panel" id="panel-proxy">
       <div class="section">
-        <h2>Subscription.</h2>
+        <h2>订阅管理.</h2>
         <div class="h2-sub">
-          粘贴订阅地址，拉取节点后点任意一个即可启用。容器首次启用节点时会自动下载所需的内核组件。
+          粘贴订阅地址，获取节点后点击 "启用" 即可。容器首次启用高级协议节点时会自动下载内核组件。
         </div>
         <div>
           <label>订阅地址</label>
           <input type="text" id="sub_url" placeholder="https://example.com/api/v1/client/subscribe?token=...">
         </div>
         <div class="actions">
-          <button class="btn btn-primary" id="fetchBtn" onclick="fetchSubscription()">Fetch nodes</button>
+          <button class="btn btn-primary" id="fetchBtn" onclick="fetchSubscription()">拉取节点</button>
           <span id="subSummary" class="field-hint"></span>
-          <span id="coreBadge" class="pill warn" style="display:none;margin-left:auto;">core not ready</span>
+          <span id="coreBadge" class="pill warn" style="display:none;margin-left:auto;">内核未就绪</span>
         </div>
         <div class="node-list" id="nodeList"></div>
       </div>
 
       <div class="section">
-        <h2>Manual proxy URL.</h2>
-        <div class="h2-sub">不用订阅？直接填一个 http/socks5 代理地址。留空则直连。</div>
+        <h2>自定义出站代理.</h2>
+        <div class="h2-sub">手动填入现有的 http/socks5 代理地址。留空则为直连模式。</div>
         <div>
-          <label>Proxy URL</label>
-          <input type="text" id="proxy_url" placeholder="http://host:port  /  socks5://host:port  /  空=直连">
+          <label>代理 URL</label>
+          <input type="text" id="proxy_url" placeholder="socks5://127.0.0.1:7890 (空=直连)">
           <div class="field-hint">
             支持 <code>http://</code>、<code>https://</code>、<code>socks5://</code>
           </div>
           <div id="envOverrideWarn" class="field-warn" style="display:none;margin-top:6px;"></div>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" onclick="saveProxy()">Save proxy URL</button>
+          <button class="btn btn-primary" onclick="saveProxy()">应用代理</button>
         </div>
       </div>
     </div>
@@ -345,7 +345,7 @@ async function api(method, path, body) {
   const res = await fetch(path, opts);
   if (res.status === 401) {
     token = ''; localStorage.removeItem(TOKEN_KEY);
-    showLogin(); throw new Error('Unauthorized');
+    showLogin(); throw new Error('未授权');
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || data.message || ('HTTP ' + res.status));
@@ -374,7 +374,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       body: JSON.stringify({ password: pw })
     });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.detail || 'Login failed');
+    if (!r.ok) throw new Error(j.detail || '登录失败');
     token = j.token;
     localStorage.setItem(TOKEN_KEY, token);
     document.getElementById('pw').value = '';
@@ -414,11 +414,11 @@ async function loadSettings() {
   document.getElementById('max_retries').value = s.max_retries;
   document.getElementById('debug').checked = s.debug;
   document.getElementById('proxy_url').value = s.proxy_url || '';
-  document.getElementById('portBadge').textContent = 'Port ' + s.port_api;
+  document.getElementById('portBadge').textContent = '端口 ' + s.port_api;
 
   const warn = document.getElementById('envOverrideWarn');
   if (s.env_proxy_url_override) {
-    warn.textContent = '⚠ 环境变量 PROXY_URL=' + s.env_proxy_url_override + ' 已设置，会覆盖此处配置。';
+    warn.textContent = '⚠ 环境变量 PROXY_URL=' + s.env_proxy_url_override + ' 已设置，将覆盖此处的代理配置。';
     warn.style.display = 'block';
   } else { warn.style.display = 'none'; }
   document.getElementById('pwLockedWarn').style.display = s.admin_password_env_locked ? 'block' : 'none';
@@ -451,19 +451,19 @@ async function loadProxyStatus() {
 
     if (s.active_node_uri && (s.running || s.configured_proxy_url)) {
       bar.classList.remove('off');
-      label.textContent = 'Active node';
+      label.textContent = '活跃节点';
       name.textContent = s.active_node_name || s.active_node_uri.slice(0, 60);
-      via.textContent = s.running ? `· via core ${s.proxy_url}` : `· direct ${s.configured_proxy_url}`;
+      via.textContent = s.running ? `· 经由内核 ${s.proxy_url}` : `· 直连 ${s.configured_proxy_url}`;
       stopBtn.style.display = 'inline-block';
     } else if (s.configured_proxy_url) {
       bar.classList.remove('off');
-      label.textContent = 'Manual proxy';
+      label.textContent = '手动代理中';
       name.textContent = s.configured_proxy_url;
       via.textContent = '';
       stopBtn.style.display = 'inline-block';
     } else {
       bar.classList.add('off');
-      label.textContent = 'No active node · direct connection';
+      label.textContent = '无活跃节点 · 当前为直连模式';
       name.textContent = '';
       via.textContent = '';
       stopBtn.style.display = 'none';
@@ -479,9 +479,9 @@ async function saveSettings() {
   };
   try {
     const r = await api('PUT', '/api/admin/settings', body);
-    showToast('已保存', 'ok');
+    showToast('已保存设置', 'ok');
     document.getElementById('saveTip').textContent = (r.notes && r.notes.length) ? r.notes.join(' · ') : '';
-    document.getElementById('portBadge').textContent = 'Port ' + body.port_api;
+    document.getElementById('portBadge').textContent = '端口 ' + body.port_api;
   } catch (e) { showToast(e.message, 'err'); }
 }
 
@@ -490,7 +490,7 @@ async function saveProxy() {
     // 手动改代理 URL 意味着放弃当前节点，停掉内核
     await api('POST', '/api/admin/stop-proxy');
     await api('PUT', '/api/admin/settings', { proxy_url: document.getElementById('proxy_url').value });
-    showToast('代理已保存', 'ok');
+    showToast('代理设置已保存', 'ok');
     await loadProxyStatus();
     refreshNodeHighlight();
   } catch (e) { showToast(e.message, 'err'); }
@@ -502,7 +502,7 @@ async function changePassword() {
   try {
     await api('PUT', '/api/admin/settings', { admin_password: v });
     document.getElementById('newPw').value = '';
-    showToast('密码已更新', 'ok');
+    showToast('密码已成功更新', 'ok');
   } catch (e) { showToast(e.message, 'err'); }
 }
 
@@ -522,7 +522,7 @@ async function loadKeys() {
       <td class="mono-cell">${escapeHtml(k.name)}</td>
       <td class="mono-cell masked" title="点击显示完整密钥" style="cursor:pointer;" data-full="${escapeHtml(k.key)}" onclick="toggleReveal(this)">${escapeHtml(maskKey(k.key))}</td>
       <td>${escapeHtml(k.description || '')}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteKey('${escapeHtml(k.name)}')">Delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteKey('${escapeHtml(k.name)}')">删除</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -536,35 +536,35 @@ async function addKey() {
   const name = document.getElementById('key_name').value.trim();
   const key = document.getElementById('key_value').value.trim();
   const description = document.getElementById('key_desc').value.trim();
-  if (!name || !key) { showToast('name / key 不能为空', 'err'); return; }
+  if (!name || !key) { showToast('名称与密钥不能为空', 'err'); return; }
   try {
     await api('POST', '/api/admin/keys', { name, key, description });
     document.getElementById('key_name').value = '';
     document.getElementById('key_value').value = '';
     document.getElementById('key_desc').value = '';
     await loadKeys();
-    showToast('已添加', 'ok');
+    showToast('密钥已添加', 'ok');
   } catch (e) { showToast(e.message, 'err'); }
 }
 async function deleteKey(name) {
-  if (!confirm('删除密钥 ' + name + ' ?')) return;
+  if (!confirm('确定要删除密钥 ' + name + ' 吗?')) return;
   try {
     await api('DELETE', '/api/admin/keys/' + encodeURIComponent(name));
-    await loadKeys(); showToast('已删除', 'ok');
+    await loadKeys(); showToast('已成功删除', 'ok');
   } catch (e) { showToast(e.message, 'err'); }
 }
 
 async function fetchSubscription(opts = {}) {
   const url = document.getElementById('sub_url').value.trim();
-  if (!url) { if (!opts.silent) showToast('请输入订阅地址', 'err'); return; }
+  if (!url) { if (!opts.silent) showToast('请输入有效的订阅地址', 'err'); return; }
   const btn = document.getElementById('fetchBtn');
-  btn.disabled = true; btn.textContent = 'Fetching...';
+  btn.disabled = true; btn.textContent = '获取中...';
   const listEl = document.getElementById('nodeList');
   listEl.innerHTML = '';
   document.getElementById('subSummary').textContent = '';
   try {
     const data = await api('POST', '/api/admin/subscribe', { url });
-    document.getElementById('subSummary').textContent = `共 ${data.total} 个节点`;
+    document.getElementById('subSummary').textContent = `共发现 ${data.total} 个节点`;
     if (!data.nodes.length) {
       listEl.innerHTML = '<div class="empty">没有解析到任何节点</div>';
       return;
@@ -574,7 +574,7 @@ async function fetchSubscription(opts = {}) {
     if (!opts.silent) showToast(e.message, 'err');
     listEl.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>';
   } finally {
-    btn.disabled = false; btn.textContent = 'Fetch nodes';
+    btn.disabled = false; btn.textContent = '拉取节点';
   }
 }
 
@@ -587,7 +587,7 @@ function renderNodes(nodes) {
     B: atob('Vk1lc3M='),
     C: atob('VHJvamFu'),
     D: atob('U1M='),
-    E: atob('U1NS'),
+    E: atob('U1SSRw=='),
     F: atob('SHlzdGVyaWEy'),
     H: atob('QW55VExT'),
     I: atob('VFVJQw=='),
@@ -600,7 +600,7 @@ function renderNodes(nodes) {
     div.className = 'node' + (isActive ? ' active' : '');
     div.innerHTML = `
       <div class="info">
-        <div class="name">${escapeHtml(n.name || '(unnamed)')}</div>
+        <div class="name">${escapeHtml(n.name || '(未知名称)')}</div>
         <div class="meta">
           <span class="type">${escapeHtml(displayType)}</span>
           <span>${escapeHtml(n.server)}:${n.port}</span>
@@ -608,7 +608,7 @@ function renderNodes(nodes) {
       </div>
       <div>
         <button class="btn btn-sm btn-primary" data-uri="${escapeHtml(n.raw_uri)}" data-name="${escapeHtml(n.name || '')}" onclick="useNode(this)">
-          ${isActive ? 'Re-apply' : 'Use'}
+          ${isActive ? '重新应用' : '启用'}
         </button>
       </div>
     `;
@@ -617,17 +617,16 @@ function renderNodes(nodes) {
 }
 
 function refreshNodeHighlight() {
-  // 不重新拉取，只刷新 active 高亮
   document.querySelectorAll('.node').forEach((el) => {
     const btn = el.querySelector('button[data-uri]');
     if (!btn) return;
     const uri = btn.dataset.uri;
     if (uri === currentActiveUri) {
       el.classList.add('active');
-      btn.textContent = 'Re-apply';
+      btn.textContent = '重新应用';
     } else {
       el.classList.remove('active');
-      btn.textContent = 'Use';
+      btn.textContent = '启用';
     }
   });
 }
@@ -637,10 +636,10 @@ async function useNode(btn) {
   const name = btn.dataset.name || '';
   btn.disabled = true;
   const oldTxt = btn.textContent;
-  btn.textContent = 'Applying...';
+  btn.textContent = '启用中...';
   try {
     const r = await api('POST', '/api/admin/use-node', { raw_uri: uri, name });
-    showToast('已启用: ' + (name || r.proxy_url), 'ok');
+    showToast('节点已启用: ' + (name || r.proxy_url), 'ok');
     document.getElementById('proxy_url').value = r.proxy_url;
     currentActiveUri = uri;
     await loadProxyStatus();
@@ -652,12 +651,12 @@ async function useNode(btn) {
 }
 
 async function stopProxy() {
-  if (!confirm('停止当前代理，回到直连？')) return;
+  if (!confirm('确定要停止当前代理，并切换回直连模式吗？')) return;
   try {
     await api('POST', '/api/admin/stop-proxy');
     currentActiveUri = '';
     document.getElementById('proxy_url').value = '';
-    showToast('已停止代理', 'ok');
+    showToast('已切换至直连模式', 'ok');
     await loadProxyStatus();
     refreshNodeHighlight();
   } catch (e) { showToast(e.message, 'err'); }
