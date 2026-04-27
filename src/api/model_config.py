@@ -41,10 +41,11 @@ class ModelConfigBuilder:
                 logger.warning(f"模型配置文件 {MODELS_CONFIG_FILE} 不存在，正在创建默认配置...")
                 default_models = {
                     "models": [
-                        "gemini-1.5-flash", 
-                        "gemini-1.5-pro", 
-                        "gemini-2.0-flash-exp", 
-                        "gemini-2.0-pro-exp-02-05"
+                        "gemini-3.1-flash-lite-preview",
+                        "gemini-3.1-flash-image-preview",
+                        "gemini-3.1-pro-preview",
+                        "gemini-3-flash-preview",
+                        "gemini-3-pro-image-preview"
                     ],
                     "alias_map": {}
                 }
