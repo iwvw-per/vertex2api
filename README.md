@@ -4,28 +4,27 @@
 
 ## 🚀 快速启动
 
-### 使用 Docker (推荐)
+直接使用 `docker-compose.yml` 运行：
 
-1. 克隆并进入目录:
+```yaml
+services:
+  vertex:
+    image: ghcr.io/iwvw-per/vertex2api:main
+    container_name: vertex-proxy
+    restart: unless-stopped
+    ports:
+      - "2156:2156"
+    volumes:
+      - ./config:/app/config
+```
+
+### 说明
+1. **管理面板**: `http://<ip>:2156/admin`
+2. **管理员密码**: 第一次启动时会随机生成，查看日志：
    ```bash
-   docker compose up -d --build
+   docker logs vertex-proxy 2>&1 | grep "密码:"
    ```
-2. 访问管理面板: `http://localhost:2156/admin`
-3. 默认管理员密码: 见启动日志 `docker logs vertex-proxy 2>&1 | grep "密码:"`
-
-## 🛠️ 功能特性
-
-- **双标准支持**: 兼容 OpenAI (`/v1/chat/completions`) 和 Gemini 接口格式。
-- **Web 面板**: 图形化管理 API Key、Server 设置。
-- **出站代理**: 支持面板内粘贴订阅链接或手动设置出站代理（Socks5/Http）。
-- **匿名访问**: 无需配置 Google 官方 API Key，自动处理匿名 Token。
-
-## 接入详情
-
-- **API 端口**: 2156
-- **默认 Key**: `sk-123456` (可在面板修改)
-- **OpenAI Base URL**: `http://<host>:2156/v1`
-- **支持模型**: `gemini-1.5-pro`, `gemini-2.0-flash` 等。
+3. **API 地址**: `http://<ip>:2156/v1`
 
 ## 开源协议
 MIT

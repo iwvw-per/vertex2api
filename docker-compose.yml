@@ -1,0 +1,11 @@
+services:
+  vertex:
+    build: .
+    container_name: vertex-proxy
+    restart: unless-stopped
+    ports:
+      - "2156:2156"
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config
