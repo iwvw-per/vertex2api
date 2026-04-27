@@ -188,17 +188,29 @@ def create_app(vertex_client: VertexAIClient) -> FastAPI:
         }
     app.get("/")(root)
 
-    async def health_check() -> dict[str, str | int]:
-        """健康检查端点"""
+    async def health_check() -> dict[str, Any]:
+        """健康检查端点，增加诊断信息"""
         logger.debug("处理健康检查请求")
         api_keys_count = len(api_key_manager.api_keys)
         models_count = len(vertex_client.model_builder.get_available_models())
-        logger.debug(f"当前加载: 密钥={api_keys_count}, 模型={models_count}")
+        
+        # 诊断信息
+        import os
+        from src.core import MODELS_CONFIG_FILE
+        config_dir = os.path.dirname(MODELS_CONFIG_FILE)
+        dir_files = os.listdir(config_dir) if os.path.exists(config_dir) else []
+        
         return {
             "status": "healthy",
             "timestamp": int(time.time()),
             "api_keys_loaded": api_keys_count,
-            "models_loaded": models_count
+            "models_loaded": models_count,
+            "debug": {
+                "config_file_path": MODELS_CONFIG_FILE,
+                "config_dir_exists": os.path.exists(config_dir),
+                "config_dir_contents": dir_files,
+                "cwd": os.getcwd()
+            }
         }
     app.get("/health")(health_check)
     
