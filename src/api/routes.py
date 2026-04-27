@@ -204,7 +204,7 @@ def create_app(vertex_client: VertexAIClient) -> FastAPI:
         """返回可用模型列表 (OpenAI 兼容格式)"""
         logger.debug("处理模型列表请求")
         current_time = int(time.time())
-        models: list[str] = _load_models_config()
+        models: list[str] = vertex_client.model_builder.get_available_models()
         logger.debug(f"返回 {len(models)} 个可用模型")
         return {
             "object": "list",
@@ -363,14 +363,6 @@ def create_app(vertex_client: VertexAIClient) -> FastAPI:
 
 # ==================== 辅助函数 ====================
 
-def _load_models_config() -> list[str]:
-    """加载模型配置"""
-    try:
-        with open(MODELS_CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-            return cast(list[str], config.get('models', []))
-    except Exception:
-        return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-2.0-pro-exp-02-05", "gemini-2.5-flash"]
 
 
 def _vertex_error_to_oai(e: VertexError) -> dict[str, Any]:

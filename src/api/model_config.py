@@ -16,6 +16,7 @@ class ModelConfigBuilder:
     """解析模型名称、处理后缀、构建生成配置"""
     
     _cached_map: dict[str, str] | None = None
+    _cached_models: list[str] | None = None
     _last_load_time: float = 0
     
     def __init__(self) -> None:
@@ -26,30 +27,39 @@ class ModelConfigBuilder:
                 "model_count": len(self._get_model_map())
             })
     
-    def _get_model_map(self) -> dict[str, str]:
-        # 简单缓存机制，每 60 秒检查一次文件更新
+    def _load_config(self) -> None:
+        """从文件加载配置并缓存"""
         current_time = time.time()
+        # 缓存 60 秒
         if ModelConfigBuilder._cached_map is not None and current_time - ModelConfigBuilder._last_load_time < 60:
-            return ModelConfigBuilder._cached_map
+            return
             
         try:
             with open(MODELS_CONFIG_FILE, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 ModelConfigBuilder._cached_map = cast(dict[str, str], config.get('alias_map', {}))
+                ModelConfigBuilder._cached_models = cast(list[str], config.get('models', []))
                 ModelConfigBuilder._last_load_time = current_time
                 logger.debug("模型配置文件加载成功", extra={
                     "config_file": MODELS_CONFIG_FILE,
-                    "alias_count": len(ModelConfigBuilder._cached_map)
+                    "alias_count": len(ModelConfigBuilder._cached_map),
+                    "model_count": len(ModelConfigBuilder._cached_models)
                 })
         except Exception as e:
-            logger.warning(f"模型配置文件加载失败，使用空配置", extra={
-                "config_file": MODELS_CONFIG_FILE,
-                "error": str(e)
-            })
+            logger.error(f"模型配置文件 {MODELS_CONFIG_FILE} 加载失败: {e}", exc_info=True)
             if ModelConfigBuilder._cached_map is None:
                 ModelConfigBuilder._cached_map = {}
-        
+            if ModelConfigBuilder._cached_models is None:
+                ModelConfigBuilder._cached_models = []
+
+    def _get_model_map(self) -> dict[str, str]:
+        self._load_config()
         return ModelConfigBuilder._cached_map or {}
+    
+    def get_available_models(self) -> list[str]:
+        """获取所有可用的模型 ID 列表"""
+        self._load_config()
+        return ModelConfigBuilder._cached_models or []
     
     def parse_model_name(self, model: str) -> str:
         """
