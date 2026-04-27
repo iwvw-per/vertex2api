@@ -57,11 +57,6 @@ class APIKeyManager:
                         key_name = parts[0].strip()
                         api_key = parts[1].strip()
 
-                        # 验证密钥格式
-                        if not api_key.startswith('sk-'):
-                            logger.warning(f"第 {line_num} 行密钥格式无效 ({key_name})，跳过")
-                            error_count += 1
-                            continue
 
                         self.api_keys.add(api_key)
                         self.key_names[api_key] = key_name
