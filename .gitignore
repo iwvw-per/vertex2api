@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configuration & Secrets
+.env
+config/config.json
+config/api_keys.txt
+!config/models.json
+
+# Logs & Temporary files
+logs/
+errors/
+*.tmp
+*.log
+
+# Docker
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test scripts
+stress_test.py

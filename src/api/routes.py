@@ -1,0 +1,386 @@
+"""FastAPI路由模块"""
+
+import json
+import time
+import uuid
+from typing import Any, cast
+import collections.abc
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
+
+from src.core import MODELS_CONFIG_FILE
+from src.core.errors import (
+    VertexError,
+    InvalidArgumentError,
+    InternalError,
+    RateLimitError,
+    AuthenticationError,
+)
+from src.api.vertex_client import VertexAIClient
+from src.api.oai_adapter import OAIRequestConverter, OAIResponseConverter
+from src.core.auth import api_key_manager
+from src.utils.logger import get_logger, set_request_id
+
+# 初始化日志
+logger = get_logger(__name__)
+
+
+def extract_api_key_from_request(request: Request) -> str | None:
+    """
+    从请求中提取API密钥
+    支持三种方式（按优先级）：
+    1. Authorization: Bearer <key> (OpenAI 标准 Header)
+    2. x-goog-api-key: <key> (Google/Gemini 标准 Header)
+    3. ?key=<key> (Google/Gemini 标准 Query Param)
+    """
+    
+    # 1. 尝试 OpenAI 标准 Authorization Header
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+
+    # 2. 尝试 x-goog-api-key Header
+    goog_api_key = request.headers.get("x-goog-api-key")
+    if goog_api_key:
+        return goog_api_key.strip()
+        
+    # 3. 尝试 URL Query Parameter
+    query_key = request.query_params.get("key")
+    if query_key:
+        return query_key.strip()
+
+    return None
+
+
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    """API密钥认证中间件"""
+
+    def __init__(self, app: ASGIApp, excluded_paths: list[str] | None = None, excluded_prefixes: list[str] | None = None):
+        super().__init__(app)
+        self.excluded_paths: list[str] = excluded_paths or ["/", "/health"]
+        self.excluded_prefixes: list[str] = excluded_prefixes or []
+
+    async def dispatch(self, request: Request, call_next: collections.abc.Callable[[Request], collections.abc.Awaitable[Any]]):
+        # 为每个请求设置唯一的请求ID
+        set_request_id()
+        
+        path = request.url.path
+        method = request.method
+        client_ip = request.client.host if request.client else "unknown"
+        
+        logger.debug(f"收到请求: {method} {path} from {client_ip}")
+
+        # 检查是否是完全排除的路径
+        if self.excluded_paths and path in self.excluded_paths:
+            logger.debug(f"路径 {path} 在排除列表中，跳过认证")
+            return await call_next(request)
+
+        # 检查前缀排除（管理后台、静态资源）
+        if any(path.startswith(p) for p in self.excluded_prefixes):
+            return await call_next(request)
+
+        # 获取API密钥
+        api_key = extract_api_key_from_request(request)
+        if not api_key:
+            logger.warning(f"请求 {path} 缺少 API 密钥")
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": {
+                        "code": 401,
+                        "message": "Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API.",
+                        "status": "UNAUTHENTICATED"
+                    }
+                }
+            )
+
+        # 验证API密钥
+        if not api_key_manager.validate_key(api_key):
+            logger.warning(f"请求 {path} 使用了无效的 API 密钥: {api_key[:8]}...")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": {
+                        "code": 400,
+                        "message": "API key not valid. Please pass a valid API key.",
+                        "status": "INVALID_ARGUMENT"
+                    }
+                }
+            )
+
+        # 将API密钥存储在请求状态中
+        request.state.api_key = api_key
+        logger.debug(f"API 密钥验证成功: {api_key[:8]}...")
+
+        start_time = time.time()
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        
+        logger.info(f"{method} {path} - {response.status_code} ({process_time:.3f}s)")
+        
+        return response
+
+
+def create_app(vertex_client: VertexAIClient) -> FastAPI:
+    """创建FastAPI应用"""
+    logger.info("创建 FastAPI 应用")
+    
+    app = FastAPI(
+        title="Vertex AI Proxy (Anonymous)",
+        description="Vertex AI 代理服务，兼容 Gemini API",
+        version="1.1.0"
+    )
+
+    # 添加中间件（顺序很重要）
+    logger.debug("添加中间件")
+    app.add_middleware(
+        APIKeyMiddleware,
+        excluded_paths=["/", "/health", "/admin"],
+        excluded_prefixes=["/api/admin/", "/admin/", "/static/"],
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+
+    # 挂载管理后台路由
+    from src.api.admin import router as admin_router
+    app.include_router(admin_router)
+
+    # ==================== 全局异常处理 ====================
+    
+    @app.exception_handler(VertexError)
+    async def vertex_exception_handler(request: Request, exc: VertexError):  # type: ignore[misc]
+        """处理所有 VertexError 及其子类"""
+        logger.error(f"VertexError: {exc.message} (code={exc.code}, status={exc.status})")
+        return JSONResponse(
+            status_code=exc.code,
+            content=exc.to_Dict(),
+        )
+
+    @app.exception_handler(Exception)
+    async def general_exception_handler(request: Request, exc: Exception):  # type: ignore[misc]
+        """处理所有未捕获异常"""
+        logger.error(f"Unhandled Exception: {exc}", exc_info=True)
+        error = InternalError(message=str(exc))
+        return JSONResponse(
+            status_code=500,
+            content=error.to_Dict(),
+        )
+
+    # ==================== 基础端点 ====================
+
+    async def root() -> dict[str, str]:
+        """根路径，返回服务信息"""
+        logger.debug("处理根路径请求")
+        return {
+            "message": "Vertex AI Proxy Server (Anonymous Edition)",
+            "version": "1.1.0",
+            "auth": "API Key Authentication Required",
+            "docs": "Only Gemini API Compatible"
+        }
+    app.get("/")(root)
+
+    async def health_check() -> dict[str, str | int]:
+        """健康检查端点"""
+        logger.debug("处理健康检查请求")
+        api_keys_count = len(api_key_manager.api_keys)
+        logger.debug(f"当前加载的 API 密钥数量: {api_keys_count}")
+        return {
+            "status": "healthy",
+            "timestamp": int(time.time()),
+            "api_keys_loaded": api_keys_count
+        }
+    app.get("/health")(health_check)
+    
+    async def list_models() -> dict[str, str | list[dict[str, Any]]]:
+        """返回可用模型列表 (OpenAI 兼容格式)"""
+        logger.debug("处理模型列表请求")
+        current_time = int(time.time())
+        models: list[str] = _load_models_config()
+        logger.debug(f"返回 {len(models)} 个可用模型")
+        return {
+            "object": "list",
+            "data": [
+                {"id": m, "object": "model", "created": current_time, "owned_by": "google", "permission": []}
+                for m in models
+            ]
+        }
+    app.get("/v1beta/models")(list_models)
+    app.get("/v1/models")(list_models)
+
+    # ==================== Gemini 兼容端点 ====================
+
+    async def stream_generate_content(model: str, request: Request) -> StreamingResponse | JSONResponse:
+        """Gemini 格式的流式生成接口"""
+        logger.info(f"收到流式生成请求: 模型={model}")
+        
+        try:
+            body_any = await request.json()
+        except json.JSONDecodeError as e:
+            raise InvalidArgumentError(f"Invalid JSON in request body: {e}")
+
+        # 简单类型检查
+        if not isinstance(body_any, dict):
+                raise InvalidArgumentError("Request body must be a JSON object")
+        body: dict[str, Any] = cast(dict[str, Any], body_any)
+        
+        logger.debug(f"请求体大小: {len(str(body))} 字符")
+        
+        # 完整记录请求内容（用于调试）
+        logger.debug_json("下游请求体", body)
+        
+        async def stream_generator():
+            chunk_count = 0
+            try:
+                async for chunk in vertex_client.stream_chat(
+                    model=model, gemini_payload=body
+                ):
+                    chunk_count += 1
+                    yield chunk
+            except VertexError as e:
+                logger.error(f"流式生成 Vertex 错误: {e.message}")
+                # 使用统一的错误格式
+                yield e.to_sse()
+            except Exception as e:
+                logger.error(f"流式生成未知错误: {e}")
+                # 未知错误包装为 InternalError
+                error = InternalError(message=str(e))
+                yield error.to_sse()
+            finally:
+                logger.debug(f"流式生成完成，共发送 {chunk_count} 个数据块")
+
+        return StreamingResponse(stream_generator(), media_type="application/json")
+    app.post("/v1beta/models/{model}:streamGenerateContent", response_model=None)(stream_generate_content)
+
+    async def generate_content(model: str, request: Request) -> JSONResponse | dict[str, Any]:
+        """Gemini 格式的非流式生成接口"""
+        logger.info(f"收到非流式生成请求: 模型={model}")
+        
+        try:
+            body_any = await request.json()
+        except json.JSONDecodeError as e:
+            raise InvalidArgumentError(f"Invalid JSON in request body: {e}")
+
+        if not isinstance(body_any, dict):
+                raise InvalidArgumentError("Request body must be a JSON object")
+        body: dict[str, Any] = cast(dict[str, Any], body_any)
+        
+        logger.debug(f"请求体大小: {len(str(body))} 字符")
+        
+        # 完整记录请求内容（用于调试）
+        logger.debug_json("下游请求体", body)
+        
+        start_time = time.time()
+        
+        # 直接获取 Gemini 格式响应
+        response = await vertex_client.complete_chat(
+            model=model,
+            gemini_payload=body
+        )
+        
+        process_time = time.time() - start_time
+        logger.success(f"非流式生成完成: 模型={model}, 耗时={process_time:.3f}s")
+        
+        return response
+    app.post("/v1beta/models/{model}:generateContent", response_model=None)(generate_content)
+
+    # ==================== OpenAI 兼容端点 ====================
+
+    async def oai_chat_completions(request: Request) -> StreamingResponse | JSONResponse:
+        """OpenAI 格式的 Chat Completion 接口"""
+        try:
+            body_any = await request.json()
+        except json.JSONDecodeError as e:
+            return JSONResponse(status_code=400, content={"error": {"message": f"Invalid JSON: {e}", "type": "invalid_request_error", "code": None}})
+
+        if not isinstance(body_any, dict):
+            return JSONResponse(status_code=400, content={"error": {"message": "Request body must be a JSON object", "type": "invalid_request_error", "code": None}})
+
+        body: dict[str, Any] = cast(dict[str, Any], body_any)
+        stream = body.get("stream", False)
+
+        try:
+            model, gemini_payload = OAIRequestConverter.convert(body)
+        except (KeyError, ValueError) as e:
+            return JSONResponse(status_code=400, content={"error": {"message": str(e), "type": "invalid_request_error", "code": None}})
+
+        logger.info(f"收到 OAI 请求: 模型={model}, stream={stream}")
+
+        if stream:
+            request_id = uuid.uuid4().hex[:24]
+
+            async def oai_stream_generator():
+                is_first = True
+                has_finish = False
+                try:
+                    async for gemini_chunk in vertex_client.stream_chat_realtime(model=model, gemini_payload=gemini_payload):
+                        events = OAIResponseConverter.convert_realtime_chunk(gemini_chunk, model, request_id, is_first=is_first)
+                        is_first = False
+                        for event in events:
+                            if '"finish_reason"' in event and '"finish_reason": null' not in event:
+                                has_finish = True
+                            yield event
+                    if not has_finish:
+                        base = {"id": f"chatcmpl-{request_id}", "object": "chat.completion.chunk", "created": int(time.time()), "model": model}
+                        yield f"data: {json.dumps({**base, 'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
+                    yield "data: [DONE]\n\n"
+                except VertexError as e:
+                    err = _vertex_error_to_oai(e)
+                    yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
+                    yield "data: [DONE]\n\n"
+                except Exception as e:
+                    logger.error(f"OAI 流式错误: {e}")
+                    err = {"error": {"message": str(e), "type": "server_error", "code": None}}
+                    yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
+                    yield "data: [DONE]\n\n"
+
+            return StreamingResponse(oai_stream_generator(), media_type="text/event-stream")
+        else:
+            try:
+                gemini_response = await vertex_client.complete_chat(model=model, gemini_payload=gemini_payload)
+                oai_response = OAIResponseConverter.gemini_json_to_oai_json(gemini_response, model)
+                return JSONResponse(content=oai_response)
+            except VertexError as e:
+                err = _vertex_error_to_oai(e)
+                return JSONResponse(status_code=e.code, content=err)
+            except Exception as e:
+                logger.error(f"OAI 非流式错误: {e}")
+                return JSONResponse(status_code=500, content={"error": {"message": str(e), "type": "server_error", "code": None}})
+
+    app.post("/v1/chat/completions", response_model=None)(oai_chat_completions)
+
+    logger.info("FastAPI 应用创建完成")
+    return app
+
+
+# ==================== 辅助函数 ====================
+
+def _load_models_config() -> list[str]:
+    """加载模型配置"""
+    try:
+        with open(MODELS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            return cast(list[str], config.get('models', []))
+    except Exception:
+        return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-2.0-pro-exp-02-05", "gemini-2.5-flash"]
+
+
+def _vertex_error_to_oai(e: VertexError) -> dict[str, Any]:
+    """将 VertexError 转为 OAI 错误格式"""
+    if isinstance(e, InvalidArgumentError):
+        err_type = "invalid_request_error"
+    elif isinstance(e, RateLimitError):
+        err_type = "rate_limit_error"
+    elif isinstance(e, AuthenticationError):
+        err_type = "authentication_error"
+    else:
+        err_type = "server_error"
+    return {"error": {"message": e.message, "type": err_type, "code": None}}

@@ -1,0 +1,15 @@
+# 核心 Web 框架
+fastapi
+uvicorn
+pydantic
+starlette
+
+# 网络请求与浏览器指纹伪装
+curl_cffi
+
+# HTML 解析 (用于抓取 Recaptcha Token)
+beautifulsoup4
+lxml
+
+# YAML 解析 (用于订阅 Clash 格式)
+pyyaml
