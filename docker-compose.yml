@@ -1,11 +1,13 @@
 services:
   vertex:
     build: .
-    container_name: vertex-proxy
+    container_name: vertex2api
     restart: unless-stopped
     ports:
       - "2156:2156"
     env_file:
       - .env
+    environment:
+      - ADMIN_PASSWORD=admin_password_here
     volumes:
       - ./config:/app/config

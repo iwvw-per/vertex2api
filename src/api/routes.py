@@ -138,7 +138,7 @@ def create_app(vertex_client: VertexAIClient) -> FastAPI:
     logger.debug("添加中间件")
     app.add_middleware(
         APIKeyMiddleware,
-        excluded_paths=["/", "/health", "/admin"],
+        excluded_paths=["/", "/health", "/admin", "/favicon.ico"],
         excluded_prefixes=["/api/admin/", "/admin/", "/static/"],
     )
     app.add_middleware(
