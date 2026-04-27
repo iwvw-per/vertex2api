@@ -8,7 +8,7 @@ from pathlib import Path
 from .config import load_config
 
 _config = load_config()
-_ROOT_DIR = Path(__file__).parent.parent.parent
+_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 # API 服务端口
 PORT_API = _config.get("port_api", 2156)

@@ -192,11 +192,13 @@ def create_app(vertex_client: VertexAIClient) -> FastAPI:
         """健康检查端点"""
         logger.debug("处理健康检查请求")
         api_keys_count = len(api_key_manager.api_keys)
-        logger.debug(f"当前加载的 API 密钥数量: {api_keys_count}")
+        models_count = len(vertex_client.model_builder.get_available_models())
+        logger.debug(f"当前加载: 密钥={api_keys_count}, 模型={models_count}")
         return {
             "status": "healthy",
             "timestamp": int(time.time()),
-            "api_keys_loaded": api_keys_count
+            "api_keys_loaded": api_keys_count,
+            "models_loaded": models_count
         }
     app.get("/health")(health_check)
     
