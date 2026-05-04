@@ -540,10 +540,43 @@ async def update_settings(body: SettingsBody, request: Request) -> dict[str, Any
     return {"status": "ok", "notes": notes}
 
 
+def _get_env_api_keys() -> list[dict[str, str]]:
+    env_keys = os.environ.get("API_KEYS", "").strip()
+    if not env_keys:
+        return []
+    out: list[dict[str, str]] = []
+    for i, part in enumerate(env_keys.split(","), 1):
+        part = part.strip()
+        if not part:
+            continue
+        if ":" in part:
+            name, key = part.split(":", 1)
+            name = name.strip()
+            key = key.strip()
+        else:
+            key = part
+            name = f"env_key_{i}"
+        if key:
+            out.append({
+                "name": name,
+                "key": key,
+                "description": "来自环境变量 (只读)",
+                "env_locked": True
+            })
+    return out
+
+
 @router.get("/api/admin/keys")
 async def get_keys(request: Request) -> dict[str, Any]:
     _require_auth(request)
-    return {"keys": _read_api_keys()}
+    keys = _read_api_keys()
+    for k in keys:
+        k["env_locked"] = False
+    
+    env_keys = _get_env_api_keys()
+    # 合并，如果同名则环境变量优先（或者文件优先？通常环境变量优先比较符合习惯）
+    # 这里我们把它们都列出来，让用户看到
+    return {"keys": env_keys + keys}
 
 
 @router.post("/api/admin/keys")
@@ -556,6 +589,11 @@ async def add_key(body: KeyBody, request: Request) -> dict[str, str]:
     if ":" in name:
         raise HTTPException(status_code=400, detail="name 不能包含冒号")
 
+    # 检查是否与环境变量冲突
+    env_keys = _get_env_api_keys()
+    if any(k["name"] == name for k in env_keys):
+        raise HTTPException(status_code=400, detail=f"名称 '{name}' 已被环境变量锁定，请使用其他名称")
+
     keys = _read_api_keys()
     keys = [k for k in keys if k["name"] != name]  # 同名覆盖
     keys.append({"name": name, "key": key, "description": body.description or ""})
@@ -567,6 +605,12 @@ async def add_key(body: KeyBody, request: Request) -> dict[str, str]:
 @router.delete("/api/admin/keys/{name}")
 async def delete_key(name: str, request: Request) -> dict[str, str]:
     _require_auth(request)
+    
+    # 检查是否是环境变量键
+    env_keys = _get_env_api_keys()
+    if any(k["name"] == name for k in env_keys):
+        raise HTTPException(status_code=400, detail="来自环境变量的密钥无法在面板删除")
+
     keys = _read_api_keys()
     new_keys = [k for k in keys if k["name"] != name]
     if len(new_keys) == len(keys):
