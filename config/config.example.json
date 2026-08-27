@@ -1,0 +1,19 @@
+{
+  "admin_password": "",
+  "port_api": 2156,
+  "drop_max_tokens": false,
+  "aggregate_stream": false,
+  "fake_stream_enabled": true,
+  "default_image_size": "1K",
+  "default_response_modalities": "图文",
+  "max_n": 8,
+  "max_retries": 2,
+  "proxy_url": "",
+  "parallel_pool_enabled": true,
+  "parallel_pool_size": 15,
+  "parallel_node_top_k": 80,
+  "parallel_pool_delay_ms": 1500,
+  "parallel_pool_delay_dynamic": false,
+  "sticky_node_priority": false,
+  "telemetry_enabled": false
+}

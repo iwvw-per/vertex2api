@@ -1,27 +1,42 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Configuration & Secrets
-.env
+# Runtime config (contains secrets)
 config/config.json
 config/api_keys.txt
-!config/models.json
+config/nodes.json
+config/node_health.json
 
-# Logs & Temporary files
-logs/
-errors/
-*.tmp
-*.log
-vertex-master/
+# SQLite database and WAL files
+config/data.db
+config/data.db-shm
+config/data.db-wal
 
-# Docker
-.dockerignore
+# Binaries
+vertex-proxy
+vertex-proxy-*
+*.exe
+*~
 
-# OS files
+# Release packaging output
+dist/
+
+# IDE / OS
+.vscode/
+.idea/
+.kilo/
+*.swp
 .DS_Store
-Thumbs.db
 
-# Test scripts
-stress_test.py
+# Test artifacts
+test-generated-*.png
+*.code-workspace
+
+# Build output
+telemetry-server
+cmd/telemetry-server/
+
+# Runtime state (auto-generated, never commit)
+config/state/
+config/migrated/
+
+# Logs
+logs/
+bin/
