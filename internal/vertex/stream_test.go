@@ -452,6 +452,32 @@ func TestProcessStreamingObjectDoesNotStopInsideParallelCandidateList(t *testing
 	}
 }
 
+func TestProcessStreamingObjectPreservesOuterUsageMetadataInMapBranch(t *testing.T) {
+	state := newStreamCompletionState()
+	var emitted []map[string]any
+	emit := func(chunk map[string]any) bool {
+		emitted = append(emitted, chunk)
+		return true
+	}
+	obj := map[string]any{"results": []any{map[string]any{"data": map[string]any{
+		"usageMetadata": map[string]any{"promptTokenCount": float64(5), "candidatesTokenCount": float64(3), "totalTokenCount": float64(8)},
+		"ui": map[string]any{"streamGenerateContentAnonymous": map[string]any{
+			"candidates": []any{map[string]any{"index": 0, "finishReason": "STOP"}},
+		}},
+	}}}}
+
+	stop, err := processStreamingObject(obj, emit, state)
+	if err != nil {
+		t.Fatalf("processStreamingObject err=%v", err)
+	}
+	if !stop {
+		t.Fatal("候选 STOP 且 usage 齐全时应收尾")
+	}
+	if _, ok := emitted[0]["usageMetadata"]; !ok {
+		t.Fatalf("map 分支丢失外层 usageMetadata: chunk=%#v", emitted[0])
+	}
+}
+
 // ---- 测试小工具 ----
 
 func firstPartText(chunk map[string]any) string {

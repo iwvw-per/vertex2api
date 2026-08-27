@@ -100,7 +100,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleModelsOAI(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().Unix()
-	models := s.mw.cfg.ModelsWithFakeVariants()
+	models := s.mw.cfg.BaseModels()
 	log.Printf("[Server] [Models] 请求 OAI 模型列表，返回 %d 个模型", len(models))
 	data := make([]any, 0, len(models))
 	for _, m := range models {
@@ -112,7 +112,7 @@ func (s *Server) handleModelsOAI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleModelsGemini(w http.ResponseWriter, r *http.Request) {
-	models := s.mw.cfg.ModelsWithFakeVariants()
+	models := s.mw.cfg.BaseModels()
 	data := make([]any, 0, len(models))
 	for _, m := range models {
 		data = append(data, geminiModelInfo(m))

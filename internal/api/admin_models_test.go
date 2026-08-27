@@ -17,7 +17,7 @@ func TestAdminModelsV2RoundTrip(t *testing.T) {
 	t.Cleanup(config.InvalidateModelsCache)
 
 	adm := &AdminHandler{handler: handler{cfg: config.StaticProvider(config.DefaultConfig())}}
-	body := `{"models":[{"id":"custom-model","enabled":false,"fake_stream_enabled":false,"trailing_fix_enabled":true}],"alias_map":{"custom":"custom-model"}}`
+	body := `{"models":[{"id":"custom-model","enabled":false,"trailing_fix_enabled":true}],"alias_map":{"custom":"custom-model"}}`
 	req := httptest.NewRequest("PUT", "/api/admin/models", strings.NewReader(body))
 	rec := httptest.NewRecorder()
 	adm.adminPutModels(rec, req)
@@ -26,7 +26,7 @@ func TestAdminModelsV2RoundTrip(t *testing.T) {
 	}
 
 	entry, ok := config.LookupModel("custom-model")
-	if !ok || entry.Enabled || entry.FakeStreamEnabled || !entry.TrailingFixEnabled {
+	if !ok || entry.Enabled || !entry.TrailingFixEnabled {
 		t.Fatalf("保存后的模型状态错误: %+v, ok=%v", entry, ok)
 	}
 	if config.ResolveModelName("custom") != "custom-model" {
@@ -64,7 +64,7 @@ func TestAdminModelsAcceptsLegacyStringList(t *testing.T) {
 		t.Fatalf("PUT legacy status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	entry, ok := config.LookupModel("legacy-model")
-	if !ok || !entry.Enabled || !entry.FakeStreamEnabled {
+	if !ok || !entry.Enabled {
 		t.Fatalf("legacy 模型默认状态错误: %+v, ok=%v", entry, ok)
 	}
 	gemini36, ok := config.LookupModel("gemini-3.6-flash")

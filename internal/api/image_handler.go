@@ -38,7 +38,7 @@ func (img *ImageHandler) handleImageGenerations(w http.ResponseWriter, r *http.R
 
 	log.Printf("[Server] [ImageGenerations] 收到请求: 模型=%s, 尺寸=%s, 格式=%s", rawModel, size, respFmt)
 
-	model, _, modelOK := resolveConfiguredModel(rawModel, img.cfg)
+	model, modelOK := resolveConfiguredModel(rawModel, img.cfg)
 	if !modelOK {
 		oaiModelNotFound(w, rawModel)
 		return
@@ -107,7 +107,7 @@ func (img *ImageHandler) handleImageEdits(w http.ResponseWriter, r *http.Request
 	}
 
 	rawModel := transform.ResolveImageModel(formValue(r, "model"))
-	model, _, modelOK := resolveConfiguredModel(rawModel, img.cfg)
+	model, modelOK := resolveConfiguredModel(rawModel, img.cfg)
 	if !modelOK {
 		oaiModelNotFound(w, rawModel)
 		return
@@ -149,7 +149,7 @@ func (img *ImageHandler) handleImageVariations(w http.ResponseWriter, r *http.Re
 	}
 
 	rawModel := transform.ResolveImageModel(formValue(r, "model"))
-	model, _, modelOK := resolveConfiguredModel(rawModel, img.cfg)
+	model, modelOK := resolveConfiguredModel(rawModel, img.cfg)
 	if !modelOK {
 		oaiModelNotFound(w, rawModel)
 		return

@@ -11,7 +11,7 @@
 - **内置反爬突破**：内置 TLS 指纹伪装及 reCAPTCHA token 自动获取，轻松通过 Google 匿名端点校验。
 - **内置代理节点池**：内嵌 mihomo 内核，支持批量导入订阅和节点，提供并发竞速功能，有效应对429
 - **可视化管理面板**：提供精美的 Web 后台，无需修改 JSON 文件，在浏览器中即可轻松管理 API 密钥、模型别名、代理节点和系统设置。
-- **高级功能**：支持 Token 计数、Gemini 原生端点透传、假流式输出等。
+- **高级功能**：支持 Token 计数、Gemini 原生端点透传等。
 
 ## 🚀 三步上手
 
@@ -58,8 +58,6 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o ver
 | `proxy_url` | 空 | 全局入口代理；业务节点启用时作为第一跳，否则单独出站 |
 | `proxy_url_candidates` | `[]` | 由管理页维护的入口代理候选、测速结果和显示名称 |
 | `parallel_pool_enabled` | true | 是否开启并发竞速节点池 |
-
-> **提示**：在模型名（如 `gemini-3.5-flash`）前加上 `fake-` 或 `假流式-` 前缀，可将非流式模型伪装成流式输出。
 
 详细配置说明请参阅 [部署指南](部署指南.md#配置怎么改)。
 

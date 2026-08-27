@@ -34,7 +34,6 @@ type AppConfig struct { //nolint:govet
 	ProxyURL                  string            `json:"proxy_url"`
 	ProxyURLCandidates        []ProxyCandidate  `json:"proxy_url_candidates,omitempty"`
 	AggregateStream           bool              `json:"aggregate_stream"`
-	FakeStreamEnabled         bool              `json:"fake_stream_enabled"`
 	DropMaxTokens             bool              `json:"drop_max_tokens"`
 	SafetySettings            map[string]string `json:"safety_settings"`
 	VertexAPIKey              string            `json:"vertex_api_key"`
@@ -84,7 +83,6 @@ func DefaultConfig() AppConfig {
 		MaxN:                      8,
 		MaxSpillMB:                2048,
 		RequestTimeout:            180,
-		FakeStreamEnabled:         true,
 		RaceTimeout:               0,
 		StreamIdleTimeoutSeconds:  30,
 		ModelTurnGuardEnabled:     true,

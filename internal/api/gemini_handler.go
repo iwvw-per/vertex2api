@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -84,7 +83,7 @@ func (g *GeminiHandler) readGeminiBody(w http.ResponseWriter, r *http.Request) (
 }
 
 func (g *GeminiHandler) handleGeminiGenerate(w http.ResponseWriter, r *http.Request, model string) {
-	actualModel, _, modelOK := resolveConfiguredModel(model, g.cfg)
+	actualModel, modelOK := resolveConfiguredModel(model, g.cfg)
 	if !modelOK {
 		geminiModelNotFound(w, model)
 		return
@@ -115,7 +114,7 @@ func (g *GeminiHandler) handleGeminiGenerate(w http.ResponseWriter, r *http.Requ
 }
 
 func (g *GeminiHandler) handleGeminiStreamGenerate(w http.ResponseWriter, r *http.Request, model string) {
-	actualModel, useFake, modelOK := resolveConfiguredModel(model, g.cfg)
+	actualModel, modelOK := resolveConfiguredModel(model, g.cfg)
 	if !modelOK {
 		geminiModelNotFound(w, model)
 		return
@@ -128,14 +127,9 @@ func (g *GeminiHandler) handleGeminiStreamGenerate(w http.ResponseWriter, r *htt
 		body = reqObj
 	}
 	transform.ApplyImageDefaults(body, actualModel, g.cfg.DefaultImageSize(), g.cfg.DefaultResponseModalities())
-	log.Printf("[Server] [GeminiStreamGenerate] 收到请求: 模型=%s, 真模型=%s, 假流式=%v", model, actualModel, useFake)
+	log.Printf("[Server] [GeminiStreamGenerate] 收到请求: 模型=%s, 真模型=%s", model, actualModel)
 
 	sw := newSSEWriter(w, "text/event-stream")
-
-	if useFake {
-		g.geminiFakeStream(r.Context(), w, sw, actualModel, body)
-		return
-	}
 
 	gotChunk := false
 	hasFinish := false
@@ -198,43 +192,8 @@ func (g *GeminiHandler) handleGeminiStreamGenerate(w http.ResponseWriter, r *htt
 	}
 }
 
-func (g *GeminiHandler) geminiFakeStream(ctx context.Context, w http.ResponseWriter, sw *sseWriter, model string, body map[string]any) {
-	resp, vErr := g.vc.CompleteChat(ctx, model, body)
-	if vErr != nil {
-		ve := toVertexError(vErr)
-		if !sw.hasWritten() {
-			if isSafetyBlock(ve) {
-				writeJSON(w, http.StatusOK, geminiSafetyResponse(ve))
-				return
-			}
-			writeJSON(w, ve.Code, vertexErrorToGemini(ve))
-			return
-		}
-		if isSafetyBlock(ve) {
-			_ = sw.write(g.geminiSSE(geminiSafetyChunk(ve)))
-			return
-		}
-		_ = sw.write(g.geminiSSE(map[string]any{"error": map[string]any{
-			"code": ve.Code, "message": vertex.FriendlyErrorMessage(ve), "status": geminiStatusOf(ve),
-		}}))
-		return
-	}
-
-	text := geminiResponseText(resp)
-	chunks := splitIntoRuneChunks(text)
-	for i, piece := range chunks {
-		cand := map[string]any{"index": 0, "content": map[string]any{"role": "model", "parts": []any{map[string]any{"text": piece}}}}
-		if i == len(chunks)-1 {
-			cand["finishReason"] = "STOP"
-		}
-		chunk := map[string]any{"candidates": []any{cand}}
-		if !sw.write(g.geminiSSE(chunk)) {
-			return
-		}
-	}
-}
 func (g *GeminiHandler) handleCountTokens(w http.ResponseWriter, r *http.Request, model string) {
-	actualModel, _, modelOK := resolveConfiguredModel(model, g.cfg)
+	actualModel, modelOK := resolveConfiguredModel(model, g.cfg)
 	if !modelOK {
 		geminiModelNotFound(w, model)
 		return
@@ -261,7 +220,7 @@ func (g *GeminiHandler) handleCountTokens(w http.ResponseWriter, r *http.Request
 
 func (g *GeminiHandler) handleModelInfo(w http.ResponseWriter, modelName string) {
 	name := strings.TrimPrefix(modelName, "models/")
-	if _, _, ok := resolveConfiguredModel(name, g.cfg); !ok {
+	if _, ok := resolveConfiguredModel(name, g.cfg); !ok {
 		geminiModelNotFound(w, modelName)
 		return
 	}
@@ -358,35 +317,6 @@ func geminiSafetyChunk(e *vertex.VertexError) map[string]any {
 			"blockReasonMessage": e.Message,
 		},
 	}
-}
-
-func geminiResponseText(resp map[string]any) string {
-	var sb strings.Builder
-	cands, _ := resp["candidates"].([]any)
-	for _, cRaw := range cands {
-		c, ok := cRaw.(map[string]any)
-		if !ok {
-			continue
-		}
-		content, ok := c["content"].(map[string]any)
-		if !ok {
-			continue
-		}
-		parts, _ := content["parts"].([]any)
-		for _, pRaw := range parts {
-			p, ok2 := pRaw.(map[string]any)
-			if !ok2 {
-				continue
-			}
-			if isTruthyAny(p["thought"]) {
-				continue
-			}
-			if t, ok3 := p["text"].(string); ok3 {
-				sb.WriteString(t)
-			}
-		}
-	}
-	return sb.String()
 }
 
 func isTruthyAny(v any) bool { return jsonx.Truthy(v) }

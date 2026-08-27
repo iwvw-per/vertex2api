@@ -9,28 +9,15 @@ import (
 
 // 本文件实现模型清单端点所依赖的工具函数。
 
-// stripFakePrefix 检测并剥离假流式前缀，返回 (实际模型名, 是否假流式)。
-func stripFakePrefix(model string, fakePrefixes []string) (string, bool) {
-	for _, p := range fakePrefixes {
-		if strings.HasPrefix(model, p) {
-			return model[len(p):], true
-		}
-	}
-	return model, false
-}
-
-// resolveConfiguredModel 统一处理假流式前缀、别名、模型启用和局部能力。
-func resolveConfiguredModel(rawModel string, cfg config.ConfigProvider) (actualModel string, useFake bool, ok bool) {
-	baseModel, requestedFake := stripFakePrefix(strings.TrimSpace(rawModel), cfg.FakePrefixes())
+// resolveConfiguredModel 统一处理别名、模型启用。返回 (实际模型名, 是否可用)。
+func resolveConfiguredModel(rawModel string, cfg config.ConfigProvider) (actualModel string, ok bool) {
+	baseModel := strings.TrimSpace(rawModel)
 	actualModel = cfg.ResolveModelName(baseModel)
 	entry, exists := cfg.LookupModel(actualModel)
 	if !exists || !entry.Enabled {
-		return actualModel, requestedFake, false
+		return actualModel, false
 	}
-	if requestedFake && (!cfg.FakeStreamEnabled() || !entry.FakeStreamEnabled) {
-		return actualModel, true, false
-	}
-	return actualModel, requestedFake, true
+	return actualModel, true
 }
 
 func oaiModelNotFound(w http.ResponseWriter, model string) {

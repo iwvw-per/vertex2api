@@ -594,6 +594,13 @@ func processStreamingObject(obj map[string]any, emit func(map[string]any) bool, 
 			if innerRaw, exists := ui["streamGenerateContentAnonymous"]; exists {
 				switch inner := innerRaw.(type) {
 				case map[string]any:
+					for _, key := range []string{"usageMetadata", "modelVersion", "responseId", "promptFeedback"} {
+						if v, ok := data[key]; ok && isTruthyAny(v) {
+							if _, exists := inner[key]; !exists {
+								inner[key] = v
+							}
+						}
+					}
 					data = inner
 				case []any:
 					outerMeta := map[string]any{}

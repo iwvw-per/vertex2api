@@ -47,7 +47,7 @@ func (c *ChatHandler) handleChatCompletions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	actualModel, useFake, modelOK := resolveConfiguredModel(rawModel, c.cfg)
+	actualModel, modelOK := resolveConfiguredModel(rawModel, c.cfg)
 	if !modelOK {
 		oaiModelNotFound(w, rawModel)
 		return
@@ -86,10 +86,6 @@ func (c *ChatHandler) handleChatCompletions(w http.ResponseWriter, r *http.Reque
 
 	if aggregateStream {
 		c.oaiAggregateStream(r.Context(), w, model, geminiPayload)
-		return
-	}
-	if stream && useFake {
-		c.oaiFakeStream(r.Context(), w, model, geminiPayload)
 		return
 	}
 
@@ -208,52 +204,6 @@ func (c *ChatHandler) writeStreamError(write func(string) bool, e *vertex.Vertex
 		_ = write(sseEvent(vertexErrorToOAI(e)))
 	}
 	_ = write("data: [DONE]\n\n")
-}
-
-func (c *ChatHandler) oaiFakeStream(ctx context.Context, w http.ResponseWriter, model string, geminiPayload map[string]any) {
-	requestID := reqID24()
-	sw := newSSEWriter(w, "text/event-stream")
-
-	resp, vErr := c.vc.CompleteChat(ctx, model, geminiPayload)
-	if vErr != nil {
-		ve := toVertexError(vErr)
-		if !sw.hasWritten() {
-			if isSafetyBlock(ve) {
-				log.Printf("[Vertex] 请求被 Google 安全审查拦截, 请求ID=%s, 原因: %s", vertex.RequestIDFromContext(ctx), ve.Status)
-				writeJSON(w, http.StatusOK, oaiSafetyResponse(model))
-				return
-			}
-			writeJSON(w, ve.Code, vertexErrorToOAI(ve))
-			return
-		}
-		c.writeStreamError(sw.write, ve, requestID, model)
-		return
-	}
-
-	oai := c.respConv.ToOAI(resp, model)
-	contentText := firstChoiceContent(oai)
-
-	createdTS := time.Now().Unix()
-	chunks := splitIntoRuneChunks(contentText)
-	for i, piece := range chunks {
-		base := streamChunkBase(model, requestID)
-		base["created"] = createdTS
-		var delta map[string]any
-		if i == 0 {
-			delta = map[string]any{"role": "assistant", "content": piece}
-		} else {
-			delta = map[string]any{"content": piece}
-		}
-		choice := map[string]any{"index": 0, "delta": delta}
-		if i == len(chunks)-1 {
-			choice["finish_reason"] = "stop"
-		}
-		base["choices"] = []any{choice}
-		if !sw.write(sseEvent(base)) {
-			return
-		}
-	}
-	_ = sw.write("data: [DONE]\n\n")
 }
 
 func (c *ChatHandler) oaiAggregateStream(ctx context.Context, w http.ResponseWriter, model string, geminiPayload map[string]any) {

@@ -14,7 +14,6 @@ func (s staticConfig) DebugPprof() bool                         { return s.c.Deb
 func (s staticConfig) DebugMode() bool                          { return s.c.DebugMode }
 func (s staticConfig) DropMaxTokens() bool                      { return s.c.DropMaxTokens }
 func (s staticConfig) AggregateStream() bool                    { return s.c.AggregateStream }
-func (s staticConfig) FakeStreamEnabled() bool                  { return s.c.FakeStreamEnabled }
 func (s staticConfig) MaxN() int                                { return s.c.MaxN }
 func (s staticConfig) MaxRequestMB() int                        { return s.c.MaxRequestMB }
 func (s staticConfig) MaxSpillMB() int                          { return s.c.MaxSpillMB }
@@ -45,8 +44,6 @@ func (s staticConfig) TelemetryEnabled() *bool                  { return s.c.Tel
 func (s staticConfig) BaseModels() []string                     { return s.c.BaseModels() }
 func (s staticConfig) ModelRegistry() []ModelEntry              { return s.c.ModelRegistry() }
 func (s staticConfig) AliasMap() map[string]string              { return s.c.AliasMap() }
-func (s staticConfig) ModelsWithFakeVariants() []string         { return s.c.ModelsWithFakeVariants() }
-func (s staticConfig) FakePrefixes() []string                   { return s.c.FakePrefixes() }
 func (s staticConfig) ResolveModelName(s_ string) string        { return s.c.ResolveModelName(s_) }
 func (s staticConfig) LookupModel(s_ string) (ModelEntry, bool) { return s.c.LookupModel(s_) }
 func (s staticConfig) ConfigDir() string                        { return s.c.ConfigDir() }

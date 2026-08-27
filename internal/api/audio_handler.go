@@ -66,7 +66,7 @@ func (a *AudioHandler) handleAudioSpeech(w http.ResponseWriter, r *http.Request)
 	if rawModel == "" {
 		rawModel = ttsDefaultModel
 	}
-	actualModel, _, modelOK := resolveConfiguredModel(rawModel, a.cfg)
+	actualModel, modelOK := resolveConfiguredModel(rawModel, a.cfg)
 	if !modelOK || !strings.HasPrefix(actualModel, "gemini") {
 		oaiModelNotFound(w, rawModel)
 		return

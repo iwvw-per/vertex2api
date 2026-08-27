@@ -1,6 +1,6 @@
 let modelRows = [];
 let modelAliasMap = {};
-let modelGlobalSettings = { fake_stream_enabled: true, model_turn_guard_enabled: true };
+let modelGlobalSettings = { model_turn_guard_enabled: true };
 let modelImportMode = 'models';
 
 async function loadModels() {
@@ -10,7 +10,6 @@ async function loadModels() {
     : {
         id: String(m.id || '').trim(),
         enabled: !!m.enabled,
-        fake_stream_enabled: !!m.fake_stream_enabled,
         trailing_fix_enabled: !!m.trailing_fix_enabled,
       });
   modelAliasMap = Object.assign({}, data.alias_map || {});
@@ -23,7 +22,6 @@ function defaultModelRow(id) {
   return {
     id,
     enabled: true,
-    fake_stream_enabled: true,
     trailing_fix_enabled: id === 'gemini-3.6-flash' || id === 'gemini-3.5-flash-lite',
   };
 }
@@ -40,7 +38,6 @@ function renderModelTable() {
     const chips = aliases.map((alias, aliasIndex) => `<span class="model-alias-chip">${esc(alias)}<button type="button" title="删除别名" onclick="removeModelAlias(${index},${aliasIndex})">×</button></span>`).join('');
     return `<tr>
       <td class="model-check"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="setModelFlag(${index},'enabled',this.checked)"></td>
-      <td class="model-check"><input type="checkbox" ${row.fake_stream_enabled ? 'checked' : ''} ${modelGlobalSettings.fake_stream_enabled ? '' : 'disabled'} onchange="setModelFlag(${index},'fake_stream_enabled',this.checked)"></td>
       <td class="model-check"><input type="checkbox" ${row.trailing_fix_enabled ? 'checked' : ''} ${modelGlobalSettings.model_turn_guard_enabled ? '' : 'disabled'} onchange="setModelFlag(${index},'trailing_fix_enabled',this.checked)"></td>
       <td><input class="model-id-input font-mono" style="width: 260px; flex: none;" value="${esc(row.id)}" onchange="renameModel(${index},this.value)"></td>
       <td><div class="model-alias-list">${chips}</div><div class="model-alias-add"><input id="modelAliasInput_${index}" style="width: 260px; flex: none;" placeholder="输入别名"><button type="button" class="btn ghost" onclick="addModelAlias(${index})">添加</button></div></td>
@@ -48,8 +45,6 @@ function renderModelTable() {
     </tr>`;
   }).join('');
   updateModelHeaderChecks();
-  const fakeHint = $('#modelFakeGlobalHint');
-  if (fakeHint) fakeHint.textContent = modelGlobalSettings.fake_stream_enabled ? '' : '全局假流式已关闭，局部选择暂时保留';
   const trailingHint = $('#modelTrailingGlobalHint');
   if (trailingHint) trailingHint.textContent = modelGlobalSettings.model_turn_guard_enabled ? '' : '尾部修复总开关已关闭，局部选择暂时保留';
 }
@@ -67,14 +62,13 @@ function setAllModelFlags(key, value) {
 }
 
 function updateModelHeaderChecks() {
-  [['enabled', 'allModelsEnabled'], ['fake_stream_enabled', 'allModelsFake'], ['trailing_fix_enabled', 'allModelsTrailing']].forEach(([key, id]) => {
+  [['enabled', 'allModelsEnabled'], ['trailing_fix_enabled', 'allModelsTrailing']].forEach(([key, id]) => {
     const el = $('#' + id);
     if (!el) return;
     const selected = modelRows.filter(row => row[key]).length;
     el.checked = modelRows.length > 0 && selected === modelRows.length;
     el.indeterminate = selected > 0 && selected < modelRows.length;
-    el.disabled = (key === 'fake_stream_enabled' && !modelGlobalSettings.fake_stream_enabled) ||
-      (key === 'trailing_fix_enabled' && !modelGlobalSettings.model_turn_guard_enabled);
+    el.disabled = (key === 'trailing_fix_enabled' && !modelGlobalSettings.model_turn_guard_enabled);
   });
 }
 
