@@ -63,3 +63,23 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o ver
 
 详细配置说明请参阅 [部署指南](部署指南.md#配置怎么改)。
 
+## ☁️ Koyeb（无持久化硬盘容器）部署
+
+Koyeb 容器没有持久化磁盘，每次部署/重启都是全新环境。本项目已适配无状态启动，全部通过环境变量注入：
+
+| 环境变量 | 说明 | 示例 |
+|---|---|---|
+| `VPROXY_NODES` | **必填**。节点池代理 URI，逗号/分号分隔（启动时自动导入，否则无节点） | `http://Default.slot1:pass@host:2260,http://Default.slot3:pass@host:2260` |
+| `VPROXY_API_KEYS_ENV` | **必填**。API 密钥，`name:sk-xxx:desc` 格式，分号分隔 | `k1:sk-hello123:desc` |
+| `ADMIN_PASSWORD` | 管理后台密码（不设则每次启动自动生成并打印到日志） | `my-secret-pw` |
+| `PORT` | 监听端口（Koyeb 会自动注入） | `8080` |
+
+部署要点：
+
+1. **构建方式**：Koyeb 选择 Docker build（仓库根 `Dockerfile`）。
+2. **健康检查**：`GET /health` 免鉴权返回 `200`，可直接作为 Koyeb 健康检查路径。
+3. **无状态自动初始化**：入口脚本自动完成规则同意、配置文件初始化；`data.db`（节点健康状态）每次重建，节点池依赖 `VPROXY_NODES`。
+4. **日志**：`logs/` 非持久化，建议对接 Koyeb 日志收集。
+
+> 本地/自建部署则无需这些环境变量：配置写在 `config/config.json`，节点通过管理面板或 `config/data.db` 维护。
+
